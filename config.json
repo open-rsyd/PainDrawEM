@@ -1,0 +1,136 @@
+{
+	"name": "PainDraw",
+
+	"namespace": "OPEN\\PainDraw",
+
+	"description": "PainDraw is a REDCap external module that enables collection of **vector-based drawing data** from users directly within REDCap instruments and surveys.",
+
+	"authors": [
+		{
+			"name": "Anders Kristian Haakonsson",
+			"email": "anders.kristian.haakonsson@rsyd.dk",
+			"institution": "OPEN // Open Patient data Explorative Network"
+		}
+	],
+	
+	"versions": [
+		{
+			"0.3": "Beta-version. Renamed module from PainSketch to PainDraw. Minor changes to data model (json)."
+		}
+	],
+	"framework-version": 16,
+	"project-settings": [
+		{
+			"key": "group_of_fields",
+			"name": "Configure PainDraw drawing canvas (one per image)",
+			"required": false,
+			"type": "sub_settings",
+			"repeatable": true,
+			"sub_settings":[
+				{
+					"key": "instrument",
+					"name": "Select an instrument for the PainDraw drawing canvas.<br>NOTE: You can only have one PainDraw drawing canvas pr. REDCap instrument.",
+					"required": true,
+					"type": "form-list",
+					"repeatable": false
+				},
+				{
+					"key": "canvas_field",
+					"name": "Specify a file-upload field to host the PainDraw canvas.<br>NOTE: The field must be on the selected instrument",
+					"required": true,
+					"type": "field-list",
+					"field-type": "file",
+					"repeatable": false
+				},
+				{
+					"key": "image_file",
+					"name": "Upload image file for the drawing canvas.<br>NOTE: Something about supported file formats",
+					"required": false,
+					"type": "file",
+					"repeatable": false
+				},
+				{
+					"key": "format_error",
+					"name": "1=error, 0=no error",
+					"required": false,
+					"hidden": true,
+					"type": "integer",
+					"repeatable": false
+				},
+				{
+					"key": "image_store_field",
+					"name": "If you want a copy of the generated image stored in an file upload field on the instrument, specify which field here.<br>NOTE: The field must be on the same instrument as the PainDraw drawing canvas.",
+					"required": false,
+					"type": "field-list",
+					"field-type": "file",
+					"repeatable": false
+				},	
+				{
+					"key": "image_md5",
+					"name": "MD5 sum of image, ensures consistency",
+					"type": "text",
+					"hidden": true
+				},
+				{
+					"key": "image_file_name",
+					"name": "File name of image",
+					"type": "text",
+					"hidden": true
+				},
+				{
+					"key": "canvas_width",
+					"name": "Specify width of drawing canvas in pixels<br>NOTE: Will be set automatic based on image dimensions if left blank",
+					"required": false,
+					"type": "text",
+					"validation": "integer"
+				},
+				{
+					"key": "canvas_height",
+					"name": "Specify height of drawing canvas in pixels<br>NOTE: Will be set automatic based on image dimensions if left blank",
+					"required": false,
+					"type": "text",
+					"validation": "integer"
+				},
+				{
+					"key": "draw_tool",
+					"name": "Choose drawing tool (default = Spray)",
+					"required": false,
+					"type": "dropdown",
+					"choices": [
+						{ "value":"spray", "name":"Spray" },
+						{ "value":"pen", "name":"Pen" }
+					]
+				},
+				{
+					"key": "line_width",
+					"name": "Line or spray point width (default 3)",
+					"type": "text",
+					"validation": "integer"
+				},
+				{
+					"key": "line_color",
+					"name": "Line or spray point color (default red: '#fc3d03')<br>NOTE: Must be HEX format",
+					"type": "text"
+				},
+				{
+					"key": "transparancy",
+					"name": "Transparancy of drawn points [0 - 100] % (default = 90%)",
+					"type": "text",
+					"validation": "integer"
+				},
+				{
+					"key": "spray_radius",
+					"name": "Spray radius. ordinate (default 5)",
+					"type": "text",
+					"validation": "integer"
+				},
+				{
+					"key": "spray_density",
+					"name": "Spray density. Apply this many pixels to drawing pr. coordinate (default 15)",
+					"type": "text",
+					"validation": "integer"
+				}
+			]
+		}
+	]		
+}
