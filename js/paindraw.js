@@ -218,7 +218,10 @@ canvas_field.addEventListener('mousemove', function(e) {
   }
 });
 
-canvas_field.addEventListener('mouseup', function(e) {
+
+
+  // Ends the current stroke and stores it. Safe to call when no stroke is active.
+function endStroke() {
   if (drawing) {
     drawing = false;
     if (tool === 'pen') {
@@ -234,7 +237,11 @@ canvas_field.addEventListener('mouseup', function(e) {
     currentStrokeSettings = [];
     setDataEntryFormValuesChanged() ;
   }
-});
+}
+
+canvas_field.addEventListener('mouseup', endStroke );
+document.addEventListener('mouseup', endStroke );
+
 
 canvas_field.addEventListener("touchstart", function (e) {
   drawInputType = 'touch';
