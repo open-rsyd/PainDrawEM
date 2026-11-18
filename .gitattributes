@@ -1,0 +1,12 @@
+# Files that are only needed for development. They stay in the repository but
+# are left out of the "Source code" zip/tar.gz that GitHub generates for a release.
+/tests                  export-ignore
+/.github                export-ignore
+/composer.json          export-ignore
+/composer.lock          export-ignore
+/package.json           export-ignore
+/phpunit.xml.dist       export-ignore
+/vitest.config.js       export-ignore
+/.gitignore             export-ignore
+/.gitattributes         export-ignore
+/CONTRIBUTING.md        export-ignore
