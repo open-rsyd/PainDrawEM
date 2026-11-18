@@ -54,10 +54,11 @@ class PainDraw extends \ExternalModules\AbstractExternalModule {
 		$paindraw_stored_strokes = json_decode($_POST['paindraw_stored_strokes'], true);
 		unset($_POST['paindraw_stored_strokes']) ;
 
-		if( $paindraw_stored_strokes === null && json_last_error() !== JSON_ERROR_NONE ) {
-			return ;
+		if( ! is_array($paindraw_stored_strokes) ) {
+ 			error_log("ERROR - PainDraw REDCap external module: Client sent stroke data that is not a JSON list. Data not saved.");
+    		return ;
 		}
-		
+
 		try {
 			$validated_strokes = $this->validateJsonInput($paindraw_stored_strokes);
 		} catch (\ValidationException $e) {
@@ -72,11 +73,11 @@ class PainDraw extends \ExternalModules\AbstractExternalModule {
 
 		$cfg = $this->parseModuleSettings($project_id, $instrument ) ;
 		
-		if( ! array_key_exists('img_url', $cfg) ) {
+		if( empty($cfg['img_url']) ) {
 			return ;
 		}
 
-		$unique_drawing_id = "PID{$project_id}-R{$record}F-{$cfg['canvas_field']}-E{$event_id}-I{$repeat_instance}" ;
+		$unique_drawing_id = "PID{$project_id}-R{$record}-F{$cfg['canvas_field']}-E{$event_id}-I{$repeat_instance}" ;
 		$paindraw_version = $this->getModuleDirectoryName() ;
 
 		$paindraw_data = array(
@@ -109,10 +110,10 @@ class PainDraw extends \ExternalModules\AbstractExternalModule {
 		// Save PNG image to field.
 		if( array_key_exists('image_store_field', $cfg) ) {
 			
-			$imgUrl = $_POST['paindraw_stored_png']; 
+			$imgUrl = $_POST['paindraw_stored_png'] ?? ''; 
 			unset($_POST['paindraw_stored_png']) ;
 
-			if ( preg_match('#^data:(image/png);base64,(.*)$#s', $imgUrl, $matches)) {
+			if ( is_string($imgUrl) && preg_match('#^data:(image/png);base64,(.*)$#s', $imgUrl, $matches)) {
 
 				$mimeType   = $matches[1]; // should always be image/png because of regexpr
 				$base64Data = $matches[2];
@@ -123,7 +124,8 @@ class PainDraw extends \ExternalModules\AbstractExternalModule {
 				$binaryData = base64_decode($base64Data, true);
 
 				if ($binaryData === false) {
-					throw new \Exception('Base64 decode fejlede');
+					error_log("ERROR - PainDraw REDCap external module: PNG data is not valid base64. PNG not saved.");
+					return ;
 				}
 
 				if( $this->iMagickInstalled() ){
@@ -168,8 +170,9 @@ class PainDraw extends \ExternalModules\AbstractExternalModule {
 			
 			$settings['image_file_name'][$i] = $docName ;
 
-			if ( ! in_array($mimeType, self::ALLOWED_MIME_TYPES , true) ) {
-								
+			$img_dim = in_array($mimeType, self::ALLOWED_MIME_TYPES, true) ? getimagesizefromstring($fileContent) : false ;
+			if ( $img_dim === false || $img_dim[0] < 1 || $img_dim[1] < 1 ) {
+				// Unsupported MIME type, or a file that is not a decodable image								
 				$settings['image_md5'][$i] = "" ;
 				$settings['canvas_width'][$i] = "" ;
 				$settings['canvas_height'][$i] = "" ;
@@ -186,7 +189,6 @@ class PainDraw extends \ExternalModules\AbstractExternalModule {
 				$width  = ($width  && $width  > 0) ? (int)$width  : null;
 				$height = ($height && $height > 0) ? (int)$height : null;
 
-				$img_dim = getimagesizefromstring($fileContent) ;
 				$nativeWidth = $img_dim[0] ;
 				$nativeHeight = $img_dim[1] ;
 				$maxWidth = 796;
@@ -233,146 +235,102 @@ class PainDraw extends \ExternalModules\AbstractExternalModule {
 	}
 
 	/**
- 	* @throws \ValidationException
- 	*/
+ 	* Validates the strokes posted by paindraw.js and returns a copy that holds
+	* only the known keys, with normalised types.
+	*
+	* @throws \ValidationException
+	*/
 	protected function validateJsonInput(array $data): array {
+
+		$invalid = static fn() => new \ValidationException("PainDraw recieved invalid JSON from user") ;
+		
+		$matches = static fn($value, string $pattern): bool =>
+			( is_int($value) || is_float($value) || is_string($value) ) && preg_match($pattern, (string) $value) === 1 ;
+
 
 		$validated_data = [] ;
 
 		foreach($data as $d ) {
 
+			if( ! is_array($d) ) {
+				throw $invalid() ;
+			}
+
 			$v = array() ;
 
-			if( isset($d['strokeId']) ) {
-				if( preg_match('/^\d+$/', $d['strokeId'] ) ) {
-					$v['strokeId'] = (int)$d['strokeId'] ;
-				} else {
-					throw new \ValidationException("PainDraw recieved invalid JSON from user") ;
-				}
-			} else {
-				throw new \ValidationException("PainDraw recieved invalid JSON from user") ;
-			}
+			if( ! isset($d['strokeId']) || ! $matches($d['strokeId'], '/^\d+$/D' ) ) {
+				throw $invalid() ;
+			} 
+			$v['strokeId'] = (int)$d['strokeId'] ;
 
-			if( isset($d['drawInputType']) ) {
-				if( $d['drawInputType'] === "mouse" || $d['drawInputType'] === "touch" ) {
-					$v['drawInputType'] = $d['drawInputType'] ;
-				} else {
-					throw new \ValidationException("PainDraw recieved invalid JSON from user") ;
-				}
-			} else {
-				throw new \ValidationException("PainDraw recieved invalid JSON from user") ;
-			}
+			if( ! isset($d['drawInputType']) || ! in_array($d['drawInputType'], ['mouse', 'touch'], true) ) {
+				throw $invalid() ;
+ 			}
+			$v['drawInputType'] = $d['drawInputType'] ;
 
-			if( isset($d['tool']) ) {
-				if( $d['tool'] === "spray" || $d['tool'] === "pen" ) {
-					$v['tool'] = $d['tool'] ;
-				} else {
-					throw new \ValidationException("PainDraw recieved invalid JSON from user") ;
-				}
-			} else {
-				throw new \ValidationException("PainDraw recieved invalid JSON from user") ;
-			}
+			if( ! isset($d['tool']) || ! in_array($d['tool'], ['spray', 'pen'], true) ) {
+				throw $invalid() ;
+ 			}
+			$v['tool'] = $d['tool'] ;
 
-			if( isset($d['color']) ) {
-				if( preg_match('/^#([A-Fa-f0-9]{6})$/', $d['color'] ) ) {
-					$v['color'] = $d['color'] ;
-				} else {
-					throw new \ValidationException("PainDraw recieved invalid JSON from user") ;
-				}
-			} else {
-				throw new \ValidationException("PainDraw recieved invalid JSON from user") ;
-			}
+			if( ! isset($d['color']) || ! $matches($d['color'], '/^#[A-Fa-f0-9]{6}$/D') ) {
+				throw $invalid() ;
+ 			}
+			$v['color'] = $d['color'] ;
 
-			if( isset($d['lineWidth']) ) {
-				if( preg_match('/^\d+$/', $d['lineWidth'] ) ) {
-					$v['lineWidth'] = (int)$d['lineWidth'] ;
-				} else {
-					throw new \ValidationException("PainDraw recieved invalid JSON from user") ;
-				}
-			} else {
-				throw new \ValidationException("PainDraw recieved invalid JSON from user") ;
-			}
+			if( ! isset($d['lineWidth']) || ! $matches($d['lineWidth'], '/^\d+$/D') ) {
+				throw $invalid() ;
+ 			}
+			$v['lineWidth'] = (int)$d['lineWidth'] ;
 
 			if( $d['tool'] === "spray" ) {
-				if( isset($d['sprayDensity']) ) {
-					if( preg_match('/^\d+$/', $d['sprayDensity'] ) ) {
-						$v['sprayDensity'] = (int)$d['sprayDensity'] ;
-					} else {
-						throw new \ValidationException("PainDraw recieved invalid JSON from user") ;
-					}
-				} else {
-					throw new \ValidationException("PainDraw recieved invalid JSON from user") ;
-				}
-
-				if( isset($d['sprayRadius']) ) {
-					if( preg_match('/^\d+$/', $d['sprayRadius'] ) ) {
-						$v['sprayRadius'] = (int)$d['sprayRadius'] ;
-					} else {
-						throw new \ValidationException("PainDraw recieved invalid JSON from user") ;
-					}
-				} else {
-					throw new \ValidationException("PainDraw recieved invalid JSON from user") ;
-				}
+				if( ! isset($d['sprayDensity']) || ! $matches($d['sprayDensity'], '/^\d+$/D') ) {
+					throw $invalid() ;
+ 				}
+				$v['sprayDensity'] = (int)$d['sprayDensity'] ;
+			
+				if( ! isset($d['sprayRadius']) || ! $matches($d['sprayRadius'], '/^\d+$/D') ) {
+					throw $invalid() ;
+ 				}
+				$v['sprayRadius'] = (int)$d['sprayRadius'] ;
 			} else {
 				$v['sprayDensity'] = null;
 				$v['sprayRadius'] = null;
 			}
 			
-			if( isset($d['alpha']) ) {
-				if( preg_match('/^(0(\.[0-9]{1,2})?|1(\.0{1,2})?)$/', $d['alpha'] ) ) {
-					$v['alpha'] = (float)$d['alpha'] ;
-				} else {
-					throw new \ValidationException("PainDraw recieved invalid JSON from user") ;
-				}
-			} else {
-				throw new \ValidationException("PainDraw recieved invalid JSON from user") ;
+			if( ! isset($d['alpha']) || ! $matches($d['alpha'], '/^(0(\.[0-9]{1,2})?|1(\.0{1,2})?)$/D') ) {
+				throw $invalid() ;
+ 			}
+			$v['alpha'] = (float)$d['alpha'] ;
+
+			if( ! isset($d['scaleFactor']) || ! $matches($d['scaleFactor'], '/^[0-9]+(\.[0-9]+)?$/D') ) {
+				throw $invalid() ;
+ 			}
+			$v['scaleFactor'] = (float)$d['scaleFactor'] ;
+
+			if( ! isset($d['dpr']) || ! $matches($d['dpr'], '/^[0-9]+(\.[0-9]+)?$/D') ) {
+				throw $invalid() ;
+ 			}
+			$v['dpr'] = (float)$d['dpr'] ;
+
+			if( ! isset($d['p']) || ! is_array($d['p']) || empty($d['p']) ) {
+				throw $invalid() ;
 			}
 
-			if( isset($d['scaleFactor']) ) {
-				if( preg_match('/^[0-9]+(\.[0-9]+)?$/', $d['scaleFactor'] ) ) {
-					$v['scaleFactor'] = (float)$d['scaleFactor'] ;
-				} else {
-					throw new \ValidationException("PainDraw recieved invalid JSON from user") ;
-				}
-			} else {
-				throw new \ValidationException("PainDraw recieved invalid JSON from user") ;
-			}
-
-			if( isset($d['dpr']) ) {
-				if( preg_match('/^[0-9]+(\.[0-9]+)?$/', $d['scaleFactor'] ) ) {
-					$v['dpr'] = (float)$d['dpr'] ;
-				} else {
-					throw new \ValidationException("PainDraw recieved invalid JSON from user") ;
-				}
-			} else {
-				throw new \ValidationException("PainDraw recieved invalid JSON from user") ;
-			}
-
-			if( isset($d['p']) ){
-
-				if( ! is_array($d['p']) ||  empty($d['p']) ){
-					throw new \ValidationException("PainDraw recieved invalid JSON from user") ;
-				}
-					
-				foreach( $d['p'] as $pair ) {
+			foreach( $d['p'] as $pair ) {
 				
-					if (!is_array($pair) || count($pair) !== 2) {
-						throw new \ValidationException("PainDraw recieved invalid JSON from user") ;
+				if ( ! is_array($pair) || count($pair) !== 2) {
+						throw $invalid() ;
 					}
 
-					[$x, $y] = $pair;
+				[$x, $y] = $pair;
 
-					if (!is_int($x) || !is_int($y)) {
-						throw new \ValidationException("PainDraw recieved invalid JSON from user") ;
-					}
-
+				if ( ! is_int($x) || ! is_int($y) ) {
+					throw $invalid();
 				}
-
-				$v['p'] = $d['p'] ;
-
-			} else {
-				throw new \ValidationException("PainDraw recieved invalid JSON from user") ;
 			}
+
+			$v['p'] = $d['p'] ;
 
 			array_push($validated_data, $v);
 
@@ -458,8 +416,10 @@ class PainDraw extends \ExternalModules\AbstractExternalModule {
 					}
 										
 					if( isset($group['line_color']) ){
-						if ( preg_match('/(#[a-f0-9]{3}([a-f0-9]{3})?)/i', $group['line_color'] ) ) {
-							$settings['line_color'] = $group['line_color'] ;
+						if ( is_string($group['line_color']) && preg_match('/^#([a-f0-9]{3}|[a-f0-9]{6})$/iD', $group['line_color'], $color_match ) ) {
+    						$settings['line_color'] = strlen($color_match[1]) === 3
+        					? '#' . preg_replace('/(.)/', '$1$1', $color_match[1])
+        					: $group['line_color'] ;
 						} else {
 							$settings['line_color'] = '#fc3d03' ;
 						}
