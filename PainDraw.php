@@ -110,10 +110,10 @@ class PainDraw extends \ExternalModules\AbstractExternalModule {
 		// Save PNG image to field.
 		if( array_key_exists('image_store_field', $cfg) ) {
 			
-			$imgUrl = $_POST['paindraw_stored_png']; 
+			$imgUrl = $_POST['paindraw_stored_png'] ?? ''; 
 			unset($_POST['paindraw_stored_png']) ;
 
-			if ( preg_match('#^data:(image/png);base64,(.*)$#s', $imgUrl, $matches)) {
+			if ( is_string($imgUrl) && preg_match('#^data:(image/png);base64,(.*)$#s', $imgUrl, $matches)) {
 
 				$mimeType   = $matches[1]; // should always be image/png because of regexpr
 				$base64Data = $matches[2];
@@ -124,7 +124,8 @@ class PainDraw extends \ExternalModules\AbstractExternalModule {
 				$binaryData = base64_decode($base64Data, true);
 
 				if ($binaryData === false) {
-					throw new \Exception('Base64 decode fejlede');
+					error_log("ERROR - PainDraw REDCap external module: PNG data is not valid base64. PNG not saved.");
+					return ;
 				}
 
 				if( $this->iMagickInstalled() ){
@@ -169,8 +170,9 @@ class PainDraw extends \ExternalModules\AbstractExternalModule {
 			
 			$settings['image_file_name'][$i] = $docName ;
 
-			if ( ! in_array($mimeType, self::ALLOWED_MIME_TYPES , true) ) {
-								
+			$img_dim = in_array($mimeType, self::ALLOWED_MIME_TYPES, true) ? getimagesizefromstring($fileContent) : false ;
+			if ( $img_dim === false || $img_dim[0] < 1 || $img_dim[1] < 1 ) {
+				// Unsupported MIME type, or a file that is not a decodable image								
 				$settings['image_md5'][$i] = "" ;
 				$settings['canvas_width'][$i] = "" ;
 				$settings['canvas_height'][$i] = "" ;
@@ -187,7 +189,6 @@ class PainDraw extends \ExternalModules\AbstractExternalModule {
 				$width  = ($width  && $width  > 0) ? (int)$width  : null;
 				$height = ($height && $height > 0) ? (int)$height : null;
 
-				$img_dim = getimagesizefromstring($fileContent) ;
 				$nativeWidth = $img_dim[0] ;
 				$nativeHeight = $img_dim[1] ;
 				$maxWidth = 796;
