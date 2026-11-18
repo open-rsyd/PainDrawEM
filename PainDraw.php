@@ -242,142 +242,95 @@ class PainDraw extends \ExternalModules\AbstractExternalModule {
 	*/
 	protected function validateJsonInput(array $data): array {
 
+		$invalid = static fn() => new \ValidationException("PainDraw recieved invalid JSON from user") ;
+		
+		$matches = static fn($value, string $pattern): bool =>
+			( is_int($value) || is_float($value) || is_string($value) ) && preg_match($pattern, (string) $value) === 1 ;
+
+
 		$validated_data = [] ;
 
 		foreach($data as $d ) {
 
+			if( ! is_array($d) ) {
+				throw $invalid() ;
+			}
+
 			$v = array() ;
 
-			if( isset($d['strokeId']) ) {
-				if( preg_match('/^\d+$/', $d['strokeId'] ) ) {
-					$v['strokeId'] = (int)$d['strokeId'] ;
-				} else {
-					throw new \ValidationException("PainDraw recieved invalid JSON from user") ;
-				}
-			} else {
-				throw new \ValidationException("PainDraw recieved invalid JSON from user") ;
-			}
+			if( ! isset($d['strokeId']) || ! $matches($d['strokeId'], '/^\d+$/D' ) ) {
+				throw $invalid() ;
+			} 
+			$v['strokeId'] = (int)$d['strokeId'] ;
 
-			if( isset($d['drawInputType']) ) {
-				if( $d['drawInputType'] === "mouse" || $d['drawInputType'] === "touch" ) {
-					$v['drawInputType'] = $d['drawInputType'] ;
-				} else {
-					throw new \ValidationException("PainDraw recieved invalid JSON from user") ;
-				}
-			} else {
-				throw new \ValidationException("PainDraw recieved invalid JSON from user") ;
-			}
+			if( ! isset($d['drawInputType']) || ! in_array($d['drawInputType'], ['mouse', 'touch'], true) ) {
+				throw $invalid() ;
+ 			}
+			$v['drawInputType'] = $d['drawInputType'] ;
 
-			if( isset($d['tool']) ) {
-				if( $d['tool'] === "spray" || $d['tool'] === "pen" ) {
-					$v['tool'] = $d['tool'] ;
-				} else {
-					throw new \ValidationException("PainDraw recieved invalid JSON from user") ;
-				}
-			} else {
-				throw new \ValidationException("PainDraw recieved invalid JSON from user") ;
-			}
+			if( ! isset($d['tool']) || ! in_array($d['tool'], ['spray', 'pen'], true) ) {
+				throw $invalid() ;
+ 			}
+			$v['tool'] = $d['tool'] ;
 
-			if( isset($d['color']) ) {
-				if( preg_match('/^#([A-Fa-f0-9]{6})$/', $d['color'] ) ) {
-					$v['color'] = $d['color'] ;
-				} else {
-					throw new \ValidationException("PainDraw recieved invalid JSON from user") ;
-				}
-			} else {
-				throw new \ValidationException("PainDraw recieved invalid JSON from user") ;
-			}
+			if( ! isset($d['color']) || ! $matches($d['color'], '/^#[A-Fa-f0-9]{6}$/D') ) {
+				throw $invalid() ;
+ 			}
+			$v['color'] = $d['color'] ;
 
-			if( isset($d['lineWidth']) ) {
-				if( preg_match('/^\d+$/', $d['lineWidth'] ) ) {
-					$v['lineWidth'] = (int)$d['lineWidth'] ;
-				} else {
-					throw new \ValidationException("PainDraw recieved invalid JSON from user") ;
-				}
-			} else {
-				throw new \ValidationException("PainDraw recieved invalid JSON from user") ;
-			}
+			if( ! isset($d['lineWidth']) || ! $matches($d['lineWidth'], '/^\d+$/D') ) {
+				throw $invalid() ;
+ 			}
+			$v['lineWidth'] = (int)$d['lineWidth'] ;
 
 			if( $d['tool'] === "spray" ) {
-				if( isset($d['sprayDensity']) ) {
-					if( preg_match('/^\d+$/', $d['sprayDensity'] ) ) {
-						$v['sprayDensity'] = (int)$d['sprayDensity'] ;
-					} else {
-						throw new \ValidationException("PainDraw recieved invalid JSON from user") ;
-					}
-				} else {
-					throw new \ValidationException("PainDraw recieved invalid JSON from user") ;
-				}
-
-				if( isset($d['sprayRadius']) ) {
-					if( preg_match('/^\d+$/', $d['sprayRadius'] ) ) {
-						$v['sprayRadius'] = (int)$d['sprayRadius'] ;
-					} else {
-						throw new \ValidationException("PainDraw recieved invalid JSON from user") ;
-					}
-				} else {
-					throw new \ValidationException("PainDraw recieved invalid JSON from user") ;
-				}
+				if( ! isset($d['sprayDensity']) || ! $matches($d['sprayDensity'], '/^\d+$/D') ) {
+					throw $invalid() ;
+ 				}
+				$v['sprayDensity'] = (int)$d['sprayDensity'] ;
+			
+				if( ! isset($d['sprayRadius']) || ! $matches($d['sprayRadius'], '/^\d+$/D') ) {
+					throw $invalid() ;
+ 				}
+				$v['sprayRadius'] = (int)$d['sprayRadius'] ;
 			} else {
 				$v['sprayDensity'] = null;
 				$v['sprayRadius'] = null;
 			}
 			
-			if( isset($d['alpha']) ) {
-				if( preg_match('/^(0(\.[0-9]{1,2})?|1(\.0{1,2})?)$/', $d['alpha'] ) ) {
-					$v['alpha'] = (float)$d['alpha'] ;
-				} else {
-					throw new \ValidationException("PainDraw recieved invalid JSON from user") ;
-				}
-			} else {
-				throw new \ValidationException("PainDraw recieved invalid JSON from user") ;
+			if( ! isset($d['alpha']) || ! $matches($d['alpha'], '/^(0(\.[0-9]{1,2})?|1(\.0{1,2})?)$/D') ) {
+				throw $invalid() ;
+ 			}
+			$v['alpha'] = (float)$d['alpha'] ;
+
+			if( ! isset($d['scaleFactor']) || ! $matches($d['scaleFactor'], '/^[0-9]+(\.[0-9]+)?$/D') ) {
+				throw $invalid() ;
+ 			}
+			$v['scaleFactor'] = (float)$d['scaleFactor'] ;
+
+			if( ! isset($d['dpr']) || ! $matches($d['dpr'], '/^[0-9]+(\.[0-9]+)?$/D') ) {
+				throw $invalid() ;
+ 			}
+			$v['dpr'] = (float)$d['dpr'] ;
+
+			if( ! isset($d['p']) || ! is_array($d['p']) || empty($d['p']) ) {
+				throw $invalid() ;
 			}
 
-			if( isset($d['scaleFactor']) ) {
-				if( preg_match('/^[0-9]+(\.[0-9]+)?$/', $d['scaleFactor'] ) ) {
-					$v['scaleFactor'] = (float)$d['scaleFactor'] ;
-				} else {
-					throw new \ValidationException("PainDraw recieved invalid JSON from user") ;
-				}
-			} else {
-				throw new \ValidationException("PainDraw recieved invalid JSON from user") ;
-			}
-
-			if( isset($d['dpr']) ) {
-				if( preg_match('/^[0-9]+(\.[0-9]+)?$/', $d['dpr'] ) ) {
-					$v['dpr'] = (float)$d['dpr'] ;
-				} else {
-					throw new \ValidationException("PainDraw recieved invalid JSON from user") ;
-				}
-			} else {
-				throw new \ValidationException("PainDraw recieved invalid JSON from user") ;
-			}
-
-			if( isset($d['p']) ){
-
-				if( ! is_array($d['p']) ||  empty($d['p']) ){
-					throw new \ValidationException("PainDraw recieved invalid JSON from user") ;
-				}
-					
-				foreach( $d['p'] as $pair ) {
+			foreach( $d['p'] as $pair ) {
 				
-					if (!is_array($pair) || count($pair) !== 2) {
-						throw new \ValidationException("PainDraw recieved invalid JSON from user") ;
+				if ( ! is_array($pair) || count($pair) !== 2) {
+						throw $invalid() ;
 					}
 
-					[$x, $y] = $pair;
+				[$x, $y] = $pair;
 
-					if (!is_int($x) || !is_int($y)) {
-						throw new \ValidationException("PainDraw recieved invalid JSON from user") ;
-					}
-
+				if ( ! is_int($x) || ! is_int($y) ) {
+					throw $invalid();
 				}
-
-				$v['p'] = $d['p'] ;
-
-			} else {
-				throw new \ValidationException("PainDraw recieved invalid JSON from user") ;
 			}
+
+			$v['p'] = $d['p'] ;
 
 			array_push($validated_data, $v);
 
