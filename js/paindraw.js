@@ -133,6 +133,7 @@ let lineColor = paindraw_cfg['line_color'] ;
 let alpha = paindraw_cfg['alpha'] ;
 let backgroundLoaded = false ;
 let drawInputType = 'mouse' ;
+let lastX = 0, lastY = 0 ;
 let tool = paindraw_cfg['draw_tool'] ;
 
 // Set values
