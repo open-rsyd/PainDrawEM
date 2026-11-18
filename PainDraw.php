@@ -235,8 +235,11 @@ class PainDraw extends \ExternalModules\AbstractExternalModule {
 	}
 
 	/**
- 	* @throws \ValidationException
- 	*/
+ 	* Validates the strokes posted by paindraw.js and returns a copy that holds
+	* only the known keys, with normalised types.
+	*
+	* @throws \ValidationException
+	*/
 	protected function validateJsonInput(array $data): array {
 
 		$validated_data = [] ;
@@ -341,7 +344,7 @@ class PainDraw extends \ExternalModules\AbstractExternalModule {
 			}
 
 			if( isset($d['dpr']) ) {
-				if( preg_match('/^[0-9]+(\.[0-9]+)?$/', $d['scaleFactor'] ) ) {
+				if( preg_match('/^[0-9]+(\.[0-9]+)?$/', $d['dpr'] ) ) {
 					$v['dpr'] = (float)$d['dpr'] ;
 				} else {
 					throw new \ValidationException("PainDraw recieved invalid JSON from user") ;
@@ -460,8 +463,10 @@ class PainDraw extends \ExternalModules\AbstractExternalModule {
 					}
 										
 					if( isset($group['line_color']) ){
-						if ( preg_match('/(#[a-f0-9]{3}([a-f0-9]{3})?)/i', $group['line_color'] ) ) {
-							$settings['line_color'] = $group['line_color'] ;
+						if ( is_string($group['line_color']) && preg_match('/^#([a-f0-9]{3}|[a-f0-9]{6})$/iD', $group['line_color'], $color_match ) ) {
+    						$settings['line_color'] = strlen($color_match[1]) === 3
+        					? '#' . preg_replace('/(.)/', '$1$1', $color_match[1])
+        					: $group['line_color'] ;
 						} else {
 							$settings['line_color'] = '#fc3d03' ;
 						}
