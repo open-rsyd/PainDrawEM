@@ -77,7 +77,7 @@ class PainDraw extends \ExternalModules\AbstractExternalModule {
 			return ;
 		}
 
-		$unique_drawing_id = "PID{$project_id}-R{$record}F-{$cfg['canvas_field']}-E{$event_id}-I{$repeat_instance}" ;
+		$unique_drawing_id = "PID{$project_id}-R{$record}-F{$cfg['canvas_field']}-E{$event_id}-I{$repeat_instance}" ;
 		$paindraw_version = $this->getModuleDirectoryName() ;
 
 		$paindraw_data = array(
