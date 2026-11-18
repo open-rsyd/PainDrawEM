@@ -54,10 +54,11 @@ class PainDraw extends \ExternalModules\AbstractExternalModule {
 		$paindraw_stored_strokes = json_decode($_POST['paindraw_stored_strokes'], true);
 		unset($_POST['paindraw_stored_strokes']) ;
 
-		if( $paindraw_stored_strokes === null && json_last_error() !== JSON_ERROR_NONE ) {
-			return ;
+		if( ! is_array($paindraw_stored_strokes) ) {
+ 			error_log("ERROR - PainDraw REDCap external module: Client sent stroke data that is not a JSON list. Data not saved.");
+    		return ;
 		}
-		
+
 		try {
 			$validated_strokes = $this->validateJsonInput($paindraw_stored_strokes);
 		} catch (\ValidationException $e) {
@@ -72,7 +73,7 @@ class PainDraw extends \ExternalModules\AbstractExternalModule {
 
 		$cfg = $this->parseModuleSettings($project_id, $instrument ) ;
 		
-		if( ! array_key_exists('img_url', $cfg) ) {
+		if( empty($cfg['img_url']) ) {
 			return ;
 		}
 
