@@ -133,6 +133,7 @@ let lineColor = paindraw_cfg['line_color'] ;
 let alpha = paindraw_cfg['alpha'] ;
 let backgroundLoaded = false ;
 let drawInputType = 'mouse' ;
+let lastX = 0, lastY = 0 ;
 let tool = paindraw_cfg['draw_tool'] ;
 
 // Set values
@@ -218,7 +219,10 @@ canvas_field.addEventListener('mousemove', function(e) {
   }
 });
 
-canvas_field.addEventListener('mouseup', function(e) {
+
+
+  // Ends the current stroke and stores it. Safe to call when no stroke is active.
+function endStroke() {
   if (drawing) {
     drawing = false;
     if (tool === 'pen') {
@@ -234,7 +238,11 @@ canvas_field.addEventListener('mouseup', function(e) {
     currentStrokeSettings = [];
     setDataEntryFormValuesChanged() ;
   }
-});
+}
+
+canvas_field.addEventListener('mouseup', endStroke );
+document.addEventListener('mouseup', endStroke );
+
 
 canvas_field.addEventListener("touchstart", function (e) {
   drawInputType = 'touch';
