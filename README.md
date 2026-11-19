@@ -92,8 +92,10 @@ Each group defines one PainDraw canvas linked to one background image.
   - If an invalid HEX value is provided, the default color will be used.
 
 - **Transparency**
-  - Transparency of drawn points expressed as **percent** (`0–100`).
+  - Transparency of drawn lines or spray points expressed as **percent** (`0–100`).
+  - Default: `0` (fully opaque) for `pen`, `90` for `spray`.
   - The module internally converts this to an alpha value (`0–1`) for rendering.
+  - Each pen stroke is drawn with uniform transparency. Overlapping strokes add up.
 
 ### 4.3 Internal/technical settings
 

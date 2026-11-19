@@ -436,7 +436,8 @@ class PainDraw extends \ExternalModules\AbstractExternalModule {
 					if( isset($group['transparancy']) ){
 						$settings['alpha'] = round( 1 - ( $this->requireInteger($group['transparancy']) / 100 ) , 2 );
 					} else {
-						$settings['alpha'] = 0.1 ;
+						// Default: pen fully opaque (0% transparency), spray 90% transparency
+						$settings['alpha'] = ( $settings['draw_tool'] === 'pen' ) ? 1 : 0.1 ;
 					}
 
 	 			}

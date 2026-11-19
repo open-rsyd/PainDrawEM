@@ -135,6 +135,9 @@ let backgroundLoaded = false ;
 let drawInputType = 'mouse' ;
 let lastX = 0, lastY = 0 ;
 let tool = paindraw_cfg['draw_tool'] ;
+// Canvas state at the start of a pen stroke. The stroke is redrawn on top of
+// it on every move, so each pen stroke is drawn exactly once with the set alpha.
+let penSnapshot = null ;
 
 // Set values
 ctx.lineCap = 'round';
@@ -198,8 +201,7 @@ canvas_field.addEventListener('mousedown', function(e) {
   if (tool === 'spray') {   
     doSpray(x, y);
   } else {
-    ctx.beginPath();
-    ctx.moveTo(x, y);
+    penSnapshot = ctx.getImageData(0, 0, canvas_field.width, canvas_field.height);
     lastX = x; lastY = y;
     doPen(x, y);
   }
@@ -225,9 +227,7 @@ canvas_field.addEventListener('mousemove', function(e) {
 function endStroke() {
   if (drawing) {
     drawing = false;
-    if (tool === 'pen') {
-      ctx.closePath();
-    }
+    penSnapshot = null;
 
     currentStrokeSettings.p = currentStroke ;
     storedStrokes = storedStrokes.concat(currentStrokeSettings) ;
@@ -287,13 +287,21 @@ function doSpray(x, y) {
 }
 
 function doPen(x, y) {
+  currentStroke.push([x,y]);
+  lastX = x; lastY = y;
+
+  // Restore the canvas as it was before this stroke, then draw the whole
+  // stroke once. Stroking the growing path repeatedly would stack the alpha.
+  ctx.putImageData(penSnapshot, 0, 0);
   ctx.globalAlpha = alpha;
   ctx.lineWidth = lineWidth;
   ctx.strokeStyle = lineColor;
-  ctx.lineTo(x, y);
+  ctx.beginPath();
+  ctx.moveTo(currentStroke[0][0], currentStroke[0][1]);
+  for (const [px, py] of currentStroke) {
+    ctx.lineTo(px, py);
+  }
   ctx.stroke();
-  currentStroke.push([x,y]);
-  lastX = x; lastY = y;
 }
 
 function paindrawResetCanvas() {

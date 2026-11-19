@@ -114,7 +114,7 @@
 				},
 				{
 					"key": "transparancy",
-					"name": "Transparancy of drawn points [0 - 100] % (default = 90%)",
+					"name": "Transparency of drawn lines or spray points [0 - 100] % (default: 0% for pen, 90% for spray)",
 					"type": "text",
 					"validation": "integer"
 				},
